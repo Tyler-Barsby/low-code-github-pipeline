@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Workflow Documenter",
+  "version": "1.0.1",
+  "description": "This extension takes in a JSON blueprint of a low code workflow and outputs a README, before waiting for human approval to push it to GitHub",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "pipeline_icon_v2.png"
+  },
+  "icons": {
+    "128": "pipeline_icon_v2.png"
+  }
+}
