@@ -1,121 +1,127 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [blueprint, setBlueprint]       = useState('')
+  const [message, setMessage]           = useState('')
+  const [description, setDescription]   = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [status, setStatus]             = useState('Copy a blueprint, then click generate. Analysis takes roughly 1 minute.')
+
+  const [workflowName, setWorkflowName] = useState('')
+  const [moduleCount, setModuleCount]   = useState('-')
+  const [connCount, setConnCount]       = useState('-')
+  const [naming, setNaming]             = useState('-')
+  const [improvements, setImprovements] = useState([])
+  const [docOutput, setDocOutput]       = useState('')
+
+  const handleGenerate = () => {
+    if (!blueprint || !message || !description) {
+      setStatus('Please fill in all required fields.')
+      return
+    }
+    setStatus('Generating documentation...')
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <div className="popup p-popup bg gap-section">
+
+      {/* Header */}
+      <h3 className="text-primary font-bold text-lg">Low-Code AI Architect</h3>
+
+      {/* Primary action */}
+      <button
+        className="rounded-md p-btn bg-accent text-accent-fg font-bold text-md"
+        style={{ cursor: 'pointer', border: 'none' }}
+        onClick={handleGenerate}
+      >
+        Generate Documentation
+      </button>
+
+      {/* Status */}
+      <p className="text-secondary text-sm" style={{ textAlign: 'center' }}>{status}</p>
+
+      {/* Blueprint Content */}
+      <div className="box">
+        <h4 className="text-primary font-bold text-base">Blueprint Content*</h4>
+        <input
+          type="text"
+          className="p-input h-input rounded-sm border bg"
+          placeholder="Paste blueprint here..."
+          value={blueprint}
+          onChange={e => setBlueprint(e.target.value)}
+          required
+        />
+      </div>
+
+      {/* Commit Message */}
+      <div className="box">
+        <h4 className="text-primary font-bold text-base">Commit Message*</h4>
+        <input
+          type="text"
+          className="p-input h-input rounded-sm border bg"
+          placeholder="Short commit message"
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          required
+        />
+      </div>
+
+      {/* Commit Description */}
+      <div className="box">
+        <h4 className="text-primary font-bold text-base">Commit Description*</h4>
+        <textarea
+          className="p-input h-textarea rounded-sm border bg"
+          placeholder="Describe the changes made"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          required
+        />
+      </div>
+
+      {/* Advanced toggle */}
+      <a
+        className="text-secondary text-sm"
+        style={{ cursor: 'pointer', display: 'flex', gap: 'var(--gap-inline)', alignItems: 'center' }}
+        onClick={() => setShowAdvanced(v => !v)}
+      >
+        <span>Advanced</span>
+        <span
+          style={{
+            display: 'inline-block',
+            transition: 'transform 0.2s ease-in-out',
+            transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)',
+          }}
         >
-          Count is {count}
-        </button>
-      </section>
+          →
+        </span>
+      </a>
 
-      <div className="ticks"></div>
+      {/* Animated Advanced Section */}
+      <div className={`advanced-content ${showAdvanced ? 'is-open' : ''}`}>
+        <div className="advanced-inner">
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          {/* New Example Field 1 */}
+          <div className="box">
+            <h4 className="text-primary font-bold text-base">Example Field 1</h4>
+            <input type="text" className="p-input h-input rounded-sm border bg-muted" placeholder="Example value" />
+          </div>
+
+          {/* New Example Field 2 */}
+          <div className="box">
+            <h4 className="text-primary font-bold text-base">Example Field 2</h4>
+            <input type="text" className="p-input h-input rounded-sm border bg-muted" placeholder="Example value" />
+          </div>
+
+          {/* New Example Field 3 */}
+          <div className="box">
+            <h4 className="text-primary font-bold text-base">Example Field 3</h4>
+            <input type="text" className="p-input h-input rounded-sm border bg-muted" placeholder="Example value" />
+          </div>
+
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      </div>
+    </div>
   )
 }
 
