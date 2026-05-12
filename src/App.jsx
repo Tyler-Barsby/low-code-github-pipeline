@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import {
+  registerUser,
+  loginUser,
+  submitBlueprint,
+  submitApproval,
+  saveJobToStorage,
+  clearJobFromStorage,
+  getJobFromStorage,
+  startPolling,
+  stopPolling,
+} from './Api.js'
 
 const VIEW = {
   REGISTER: 'register',
@@ -88,12 +99,14 @@ export default function App() {
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
 
   const [view, setView] = useState(() =>
-    localStorage.getItem('registered') ? VIEW.INITIAL : VIEW.REGISTER
+    localStorage.getItem('userId') ? VIEW.INITIAL : VIEW.REGISTER
   )
 
   const [regName,   setRegName]   = useState('')
   const [regEmail,  setRegEmail]  = useState('')
   const [regGithub, setRegGithub] = useState('')
+  const [regUserId, setRegUserId] = useState('')
+  const [regStatus, setRegStatus] = useState('')
   const [bypassReg, setBypassReg] = useState(false)
 
   const [blueprint,       setBlueprint]      = useState('')
@@ -115,41 +128,146 @@ export default function App() {
   const [confirmed,        setConfirmed]        = useState(false)
   const [suggestedChanges, setSuggestedChanges] = useState('')
 
-  const handleRegister = () => {
+  const handlePollingComplete = (data) => {
+    setWorkflowName(data.workflowName || '')
+    setModuleCount(data.moduleCount ?? '—')
+    setConnCount(data.connectionCount ?? '—')
+    setNaming(data.namingConvention || '—')
+    setImprovements(Array.isArray(data.improvements) ? data.improvements : [])
+    setDocOutput(data.documentation || '')
+    setStatus('Documentation ready. Review and approve below.')
+    setView(VIEW.APPROVAL)
+  }
+
+  const handlePollingError = (msg) => {
+    setStatus(msg || 'An error occurred.')
+    setView(VIEW.INITIAL)
+  }
+
+  useEffect(() => {
+    getJobFromStorage().then(id => {
+      if (id) {
+        setJobId(id)
+        setView(VIEW.PENDING)
+        setStatus('Resuming analysis...')
+        startPolling(id, { onComplete: handlePollingComplete, onError: handlePollingError })
+      }
+    })
+    return () => stopPolling()
+  }, [])
+
+  const handleRegister = async () => {
     if (bypassReg) {
-      localStorage.setItem('registered', 'bypass')
+      localStorage.setItem('userId',     'bypass')
+      localStorage.setItem('reg_name',   'Dev User')
+      localStorage.setItem('reg_email',  'dev@bypass.com')
+      localStorage.setItem('reg_github', 'dev')
       setView(VIEW.INITIAL)
       return
     }
     if (!regName || !regEmail || !regGithub) {
-      alert('Please fill in all fields.')
+      setRegStatus('Please fill in all fields.')
       return
     }
-    localStorage.setItem('registered', 'true')
-    localStorage.setItem('reg_name',   regName)
-    localStorage.setItem('reg_email',  regEmail)
-    localStorage.setItem('reg_github', regGithub)
-    setView(VIEW.INITIAL)
+    try {
+      await registerUser({ name: regName, email: regEmail, github: regGithub })
+      setRegStatus('Registration submitted. An administrator will review your account and provide you with a User ID. Once received, store it somewhere safe (e.g. 1Password) — you will need it to log in.')
+    } catch (err) {
+      setRegStatus(`Registration failed: ${err.message}`)
+    }
   }
 
-  const handleGenerate = () => {
-    if (!blueprint || !message || !description) {
+  const handleEnterUserId = async () => {
+    if (!regUserId.trim()) {
+      setRegStatus('Please enter your User ID.')
+      return
+    }
+    try {
+      const { name, email, github } = await loginUser(regUserId.trim())
+      localStorage.setItem('userId',     regUserId.trim())
+      localStorage.setItem('reg_name',   name)
+      localStorage.setItem('reg_email',  email)
+      localStorage.setItem('reg_github', github)
+      setView(VIEW.INITIAL)
+    } catch (err) {
+      setRegStatus('Invalid User ID. Please check it and try again.')
+    }
+  }
+
+  const handleGenerate = async () => {
+    let bp = blueprint
+    if (!bp) {
+      bp = await navigator.clipboard.readText().catch(() => '')
+      if (bp.trim()) setBlueprint(bp.trim())
+      bp = bp.trim()
+    }
+    if (!bp || !message || !description) {
       setStatus('Please fill in all required fields.')
       return
     }
-    setStatus('Generating documentation...')
-  }
-
-  const handleApprove = () => {
-    if (!confirmed) {
-      alert('Please confirm you have read and reviewed the README.')
-      return
+    const user = {
+      name:   localStorage.getItem('reg_name')   || '',
+      email:  localStorage.getItem('reg_email')  || '',
+      github: localStorage.getItem('reg_github') || '',
+      userId: localStorage.getItem('userId')     || '',
+    }
+    try {
+      setStatus('Submitting blueprint...')
+      const { jobId: id } = await submitBlueprint({
+        blueprint: bp,
+        commitMessage:     message,
+        commitDescription: description,
+        clickupTask,
+        freshdeskTicket,
+        loomLink,
+        user,
+      })
+      setJobId(id)
+      saveJobToStorage(id)
+      setView(VIEW.PENDING)
+      setStatus('Analysing blueprint. This takes roughly 1 minute...')
+      startPolling(id, { onComplete: handlePollingComplete, onError: handlePollingError })
+    } catch (err) {
+      setStatus(`Error: ${err.message}`)
     }
   }
 
-  const handleDecline = () => {
-    setView(VIEW.INITIAL)
-    setStatus('Declined. Make your changes and try again.')
+  const handleApprove = async () => {
+    if (!confirmed) {
+      setStatus('Please confirm you have read and reviewed the README.')
+      return
+    }
+    const user = {
+      name:   localStorage.getItem('reg_name')   || '',
+      github: localStorage.getItem('reg_github') || '',
+      userId: localStorage.getItem('userId')     || '',
+    }
+    try {
+      setStatus('Pushing to GitHub...')
+      await submitApproval({ jobId, decision: 'approved', suggestedChanges: null, user })
+      clearJobFromStorage()
+      setConfirmed(false)
+      setSuggestedChanges('')
+      setView(VIEW.INITIAL)
+      setStatus('README pushed to GitHub successfully.')
+    } catch (err) {
+      setStatus(`Approval failed: ${err.message}`)
+    }
+  }
+
+  const handleDecline = async () => {
+    try {
+      setStatus('Sending feedback for reprocessing...')
+      const { jobId: newId } = await submitApproval({ jobId, decision: 'declined', suggestedChanges })
+      setJobId(newId)
+      saveJobToStorage(newId)
+      setConfirmed(false)
+      setView(VIEW.PENDING)
+      setStatus('Reprocessing. This takes roughly 1 minute...')
+      startPolling(newId, { onComplete: handlePollingComplete, onError: handlePollingError })
+    } catch (err) {
+      setStatus(`Error: ${err.message}`)
+    }
   }
 
   const PostGeneration = () => (
@@ -216,7 +334,22 @@ export default function App() {
             <input type="text" className="h-input" placeholder="github-username" value={regGithub} onChange={e => setRegGithub(e.target.value)} />
           </Field>
 
-          <button className="btn-primary" onClick={handleRegister}>Get started</button>
+          <button className="btn-primary" onClick={handleRegister}>Request access</button>
+
+          <div className="divider" />
+
+          <div>
+            <p style={{ fontSize: 'var(--text-section)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4 }}>Already have a User ID?</p>
+            <p style={{ fontSize: 'var(--text-meta)', color: 'var(--color-text-secondary)', marginBottom: 8 }}>Enter the ID provided by your administrator. Keep it stored somewhere safe (e.g. 1Password).</p>
+          </div>
+
+          <Field label="User ID">
+            <input type="text" className="h-input" placeholder="Enter your User ID" value={regUserId} onChange={e => setRegUserId(e.target.value)} />
+          </Field>
+
+          <button className="btn-secondary" onClick={handleEnterUserId}>Continue</button>
+
+          {regStatus && <p className="status-text">{regStatus}</p>}
 
           <Checkbox
             checked={bypassReg}
@@ -241,7 +374,10 @@ export default function App() {
         <div style={{ flex: 1 }} />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         <button className="dev-btn" onClick={() => {
-          localStorage.removeItem('registered')
+          localStorage.removeItem('userId')
+          localStorage.removeItem('reg_name')
+          localStorage.removeItem('reg_email')
+          localStorage.removeItem('reg_github')
           setView(VIEW.REGISTER)
         }}>
           reset reg

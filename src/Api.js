@@ -1,4 +1,5 @@
 const URL_REGISTER = import.meta.env.VITE_WEBHOOK_REGISTER
+const URL_LOGIN    = import.meta.env.VITE_WEBHOOK_LOGIN
 const URL_GENERATE = import.meta.env.VITE_WEBHOOK_GENERATE
 const URL_STATUS   = import.meta.env.VITE_WEBHOOK_STATUS
 const URL_APPROVE  = import.meta.env.VITE_WEBHOOK_APPROVE
@@ -10,6 +11,16 @@ export async function registerUser(payload) {
     body:    JSON.stringify(payload),
   })
   if (!res.ok) throw new Error(`Registration failed: ${res.status}`)
+  return res.json()
+}
+
+export async function loginUser(userId) {
+  const res = await fetch(URL_LOGIN, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ userId }),
+  })
+  if (!res.ok) throw new Error(`Login failed: ${res.status}`)
   return res.json()
 }
 
