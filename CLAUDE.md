@@ -104,7 +104,6 @@ view               — current VIEW constant
 regName            — registration: full name
 regEmail           — registration: email
 regGithub          — registration: GitHub username
-bypassReg          — dev checkbox to skip registration
 blueprint          — raw JSON blueprint string
 message            — git commit message
 description        — git commit description
@@ -194,7 +193,7 @@ All tokens are CSS custom properties on `:root`. Dark mode overrides via
 --color-text-primary    Headings, values
 --color-text-secondary  Labels, secondary text, placeholders label
 --color-text-placeholder Input placeholder text
---color-text-muted      Stat labels, dev bar labels
+--color-text-muted      Stat labels
 --color-border          Input borders
 --color-border-subtle   Stat card borders, dividers
 --color-accent          #E91E63 — primary button, focus ring, checkbox
@@ -202,7 +201,6 @@ All tokens are CSS custom properties on `:root`. Dark mode overrides via
 --color-approve         Green — approve button
 --color-decline         Red — decline button
 --color-warning-bg/border/text  Improvements box
---color-dev-bar/border  Dev toolbar
 ```
 
 ### Typography tokens
@@ -226,7 +224,7 @@ All tokens are CSS custom properties on `:root`. Dark mode overrides via
 --space-4  16px
 --space-5  20px
 --space-6  24px
---r-sm     4px  Checkboxes, dev buttons
+--r-sm     4px  Checkboxes, small buttons
 --r-md     6px  Inputs, primary buttons
 --r-lg     8px  Stat cards, improvements box
 --height-input     2.125rem  Single-line inputs
@@ -237,6 +235,7 @@ All tokens are CSS custom properties on `:root`. Dark mode overrides via
 
 ```
 .popup           Flex column container, 16px padding and gap
+.popup-header    Flex row — page title left, theme toggle right
 .field           Label + input wrapper, enforces left-aligned labels
 .field-row       Two .field side by side (used for ClickUp + Freshdesk)
 .btn-primary     Accent background button (full width)
@@ -256,8 +255,6 @@ All tokens are CSS custom properties on `:root`. Dark mode overrides via
 .search-input-wrap Input with trailing search icon
 .checkbox-row    Custom checkbox + label row
 .checkbox-box    The visual checkbox square (add .checked for filled state)
-.dev-bar         Top dev toolbar (view switcher + theme toggle + reset)
-.dev-btn         Small button inside dev bar (add .active for accent state)
 .theme-toggle    Icon-only button for light/dark toggle
 .reg-header      Top-right container for theme toggle on register page
 .h-input         Sets height to --height-input
@@ -355,20 +352,6 @@ Returns on decline:
 The new jobId is immediately polled by the extension. n8n must reprocess
 using the original blueprint + suggestedChanges, create a new job, and
 return its ID. This cycle repeats until the user approves.
-
----
-
-## Dev toolbar
-
-Visible above the main popup (not shown on the register view). Provides:
-
-- **View buttons** — instantly switch between `initial`, `pending`, `approval`
-  without going through the actual flow. Active view is highlighted in accent.
-- **Theme toggle** — light/dark toggle, same as the one in the main UI.
-- **reset reg** — clears `localStorage.registered` and navigates to the
-  register view. Use this to test the registration flow.
-
-The dev bar should be removed or hidden behind a flag before shipping.
 
 ---
 

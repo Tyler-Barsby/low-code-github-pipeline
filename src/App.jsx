@@ -107,7 +107,6 @@ export default function App() {
   const [regGithub, setRegGithub] = useState('')
   const [regUserId, setRegUserId] = useState('')
   const [regStatus, setRegStatus] = useState('')
-  const [bypassReg, setBypassReg] = useState(false)
 
   const [blueprint,       setBlueprint]      = useState('')
   const [message,         setMessage]        = useState('')
@@ -157,14 +156,6 @@ export default function App() {
   }, [])
 
   const handleRegister = async () => {
-    if (bypassReg) {
-      localStorage.setItem('userId',     'bypass')
-      localStorage.setItem('reg_name',   'Dev User')
-      localStorage.setItem('reg_email',  'dev@bypass.com')
-      localStorage.setItem('reg_github', 'dev')
-      setView(VIEW.INITIAL)
-      return
-    }
     if (!regName || !regEmail || !regGithub) {
       setRegStatus('Please fill in all fields.')
       return
@@ -350,12 +341,6 @@ export default function App() {
           <button className="btn-secondary" onClick={handleEnterUserId}>Continue</button>
 
           {regStatus && <p className="status-text">{regStatus}</p>}
-
-          <Checkbox
-            checked={bypassReg}
-            onChange={() => setBypassReg(v => !v)}
-            label="Bypass registration (dev)"
-          />
         </div>
       </div>
     )
@@ -364,30 +349,11 @@ export default function App() {
   return (
     <div style={{ background: 'var(--color-bg)' }}>
 
-      <div className="dev-bar">
-        <span className="dev-bar-label">Dev</span>
-        {[VIEW.INITIAL, VIEW.PENDING, VIEW.APPROVAL].map(v => (
-          <button key={v} className={`dev-btn ${view === v ? 'active' : ''}`} onClick={() => setView(v)}>
-            {v}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        <button className="dev-btn" onClick={() => {
-          localStorage.removeItem('userId')
-          localStorage.removeItem('reg_name')
-          localStorage.removeItem('reg_email')
-          localStorage.removeItem('reg_github')
-          setView(VIEW.REGISTER)
-        }}>
-          reset reg
-        </button>
-      </div>
-
       <div className="popup">
 
-        <div>
+        <div className="popup-header">
           <p className="page-title">Low-Code AI Architect</p>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </div>
 
         <button className="btn-primary" onClick={handleGenerate}>
