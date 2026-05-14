@@ -10,5 +10,5 @@
   "icons": {
     "128": "pipeline_icon_v2.png"
   },
-  "permissions": ["storage", "clipboardRead"]
+  "permissions": ["storage", "clipboardRead", "activeTab"]
 }

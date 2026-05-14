@@ -174,11 +174,15 @@ export default function App() {
       return
     }
     try {
-      const { name, email, github } = await loginUser(regUserId.trim())
+      const data = await loginUser(regUserId.trim())
+      if (!data.found) {
+        setRegStatus('Invalid User ID. Please check it and try again.')
+        return
+      }
       localStorage.setItem('userId',     regUserId.trim())
-      localStorage.setItem('reg_name',   name)
-      localStorage.setItem('reg_email',  email)
-      localStorage.setItem('reg_github', github)
+      localStorage.setItem('reg_name',   data.name)
+      localStorage.setItem('reg_email',  data.email)
+      localStorage.setItem('reg_github', data.github)
       setView(VIEW.INITIAL)
     } catch (err) {
       setRegStatus('Invalid User ID. Please check it and try again.')
