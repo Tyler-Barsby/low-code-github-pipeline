@@ -46,10 +46,10 @@ const SunIcon = () => (
   </svg>
 )
 
-function Field({ label, children }) {
+function Field({ label, htmlFor, children }) {
   return (
     <div className="field">
-      <label>{label}</label>
+      <label htmlFor={htmlFor}>{label}</label>
       {children}
     </div>
   )
@@ -70,10 +70,10 @@ function Checkbox({ checked, onChange, label }) {
   )
 }
 
-function SearchInput({ placeholder, value, onChange }) {
+function SearchInput({ id, placeholder, value, onChange }) {
   return (
     <div className="search-input-wrap">
-      <input type="text" placeholder={placeholder} value={value} onChange={onChange} />
+      <input id={id} name={id} type="text" placeholder={placeholder} value={value} onChange={onChange} />
       <SearchIcon />
     </div>
   )
@@ -84,6 +84,46 @@ function ThemeToggle({ theme, onToggle }) {
     <button className="theme-toggle" onClick={onToggle}>
       {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </button>
+  )
+}
+
+function PostGeneration({ workflowName, moduleCount, connCount, naming, improvements, docOutput }) {
+  return (
+    <>
+      <Field label="Workflow name" htmlFor="workflow-name">
+        <input id="workflow-name" name="workflow-name" type="text" className="h-input" placeholder="Scenario name will appear here..." value={workflowName} readOnly />
+      </Field>
+
+      <div className="stat-grid">
+        <div className="stat-card">
+          <span className="stat-value">{moduleCount}</span>
+          <span className="stat-label">Modules</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-value">{connCount}</span>
+          <span className="stat-label">Connections</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-value" style={{ fontSize: 'var(--text-body)' }}>{naming}</span>
+          <span className="stat-label">Naming</span>
+        </div>
+      </div>
+
+      {improvements.length > 0 && (
+        <div className="improvements-box">
+          <h4>⚠ Suggested improvements</h4>
+          <ul style={{ paddingLeft: '1rem', margin: 0 }}>
+            {improvements.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <Field label="Step-by-step documentation" htmlFor="doc-output">
+        <textarea id="doc-output" name="doc-output" className="h-textarea" placeholder="AI output will appear here..." value={docOutput} readOnly />
+      </Field>
+    </>
   )
 }
 
@@ -98,9 +138,33 @@ export default function App() {
 
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
 
-  const [view, setView] = useState(() =>
-    localStorage.getItem('userId') ? VIEW.INITIAL : VIEW.REGISTER
-  )
+  const SESSION_TTL = 7 * 24 * 60 * 60 * 1000
+
+  const signOut = () => {
+    localStorage.removeItem('userId')
+    localStorage.removeItem('reg_name')
+    localStorage.removeItem('reg_email')
+    localStorage.removeItem('reg_github')
+    localStorage.removeItem('loginTimestamp')
+    stopPolling()
+    clearJobFromStorage()
+    setView(VIEW.REGISTER)
+  }
+
+  const [view, setView] = useState(() => {
+    const userId = localStorage.getItem('userId')
+    if (!userId) return VIEW.REGISTER
+    const ts = parseInt(localStorage.getItem('loginTimestamp') || '0', 10)
+    if (Date.now() - ts > SESSION_TTL) {
+      localStorage.removeItem('userId')
+      localStorage.removeItem('reg_name')
+      localStorage.removeItem('reg_email')
+      localStorage.removeItem('reg_github')
+      localStorage.removeItem('loginTimestamp')
+      return VIEW.REGISTER
+    }
+    return VIEW.INITIAL
+  })
 
   const [regName,   setRegName]   = useState('')
   const [regEmail,  setRegEmail]  = useState('')
@@ -179,12 +243,13 @@ export default function App() {
         setRegStatus('Invalid User ID. Please check it and try again.')
         return
       }
-      localStorage.setItem('userId',     regUserId.trim())
-      localStorage.setItem('reg_name',   data.name)
-      localStorage.setItem('reg_email',  data.email)
-      localStorage.setItem('reg_github', data.github)
+      localStorage.setItem('userId',          regUserId.trim())
+      localStorage.setItem('reg_name',        data.name)
+      localStorage.setItem('reg_email',        data.email)
+      localStorage.setItem('reg_github',       data.github)
+      localStorage.setItem('loginTimestamp',   Date.now().toString())
       setView(VIEW.INITIAL)
-    } catch (err) {
+    } catch {
       setRegStatus('Invalid User ID. Please check it and try again.')
     }
   }
@@ -265,43 +330,6 @@ export default function App() {
     }
   }
 
-  const PostGeneration = () => (
-    <>
-      <Field label="Workflow name">
-        <input type="text" className="h-input" placeholder="Scenario name will appear here..." value={workflowName} readOnly />
-      </Field>
-
-      <div className="stat-grid">
-        <div className="stat-card">
-          <span className="stat-value">{moduleCount}</span>
-          <span className="stat-label">Modules</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-value">{connCount}</span>
-          <span className="stat-label">Connections</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-value" style={{ fontSize: 'var(--text-body)' }}>{naming}</span>
-          <span className="stat-label">Naming</span>
-        </div>
-      </div>
-
-      {improvements.length > 0 && (
-        <div className="improvements-box">
-          <h4>⚠ Suggested improvements</h4>
-          <ul style={{ paddingLeft: '1rem', margin: 0 }}>
-            {improvements.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <Field label="Step-by-step documentation">
-        <textarea className="h-textarea" placeholder="AI output will appear here..." value={docOutput} readOnly />
-      </Field>
-    </>
-  )
 
   if (view === VIEW.REGISTER) {
     return (
@@ -317,16 +345,16 @@ export default function App() {
             </p>
           </div>
 
-          <Field label="Full name">
-            <input type="text" className="h-input" placeholder="Your name" value={regName} onChange={e => setRegName(e.target.value)} />
+          <Field label="Full name" htmlFor="reg-name">
+            <input id="reg-name" name="reg-name" type="text" className="h-input" placeholder="Your name" value={regName} onChange={e => setRegName(e.target.value)} />
           </Field>
 
-          <Field label="Email">
-            <input type="email" className="h-input" placeholder="you@flowmondo.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
+          <Field label="Email" htmlFor="reg-email">
+            <input id="reg-email" name="reg-email" type="email" className="h-input" placeholder="you@flowmondo.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
           </Field>
 
-          <Field label="GitHub username">
-            <input type="text" className="h-input" placeholder="github-username" value={regGithub} onChange={e => setRegGithub(e.target.value)} />
+          <Field label="GitHub username" htmlFor="reg-github">
+            <input id="reg-github" name="reg-github" type="text" className="h-input" placeholder="github-username" value={regGithub} onChange={e => setRegGithub(e.target.value)} />
           </Field>
 
           <button className="btn-primary" onClick={handleRegister}>Request access</button>
@@ -338,8 +366,8 @@ export default function App() {
             <p style={{ fontSize: 'var(--text-meta)', color: 'var(--color-text-secondary)', marginBottom: 8 }}>Enter the ID provided by your administrator. Keep it stored somewhere safe (e.g. 1Password).</p>
           </div>
 
-          <Field label="User ID">
-            <input type="text" className="h-input" placeholder="Enter your User ID" value={regUserId} onChange={e => setRegUserId(e.target.value)} />
+          <Field label="User ID" htmlFor="reg-user-id">
+            <input id="reg-user-id" name="reg-user-id" type="text" className="h-input" placeholder="Enter your User ID" value={regUserId} onChange={e => setRegUserId(e.target.value)} />
           </Field>
 
           <button className="btn-secondary" onClick={handleEnterUserId}>Continue</button>
@@ -357,7 +385,10 @@ export default function App() {
 
         <div className="popup-header">
           <p className="page-title">Low-Code AI Architect</p>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          <div className="popup-header-actions">
+            <button className="btn-sign-out" onClick={signOut}>Sign out</button>
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          </div>
         </div>
 
         <button className="btn-primary" onClick={handleGenerate}>
@@ -368,8 +399,10 @@ export default function App() {
 
         {view === VIEW.INITIAL && (
           <>
-            <Field label="Blueprint content*">
+            <Field label="Blueprint content*" htmlFor="blueprint">
               <textarea
+                id="blueprint"
+                name="blueprint"
                 className="h-textarea"
                 style={{ resize: 'vertical' }}
                 placeholder="Copy the blueprint and click generate or paste the blueprint here"
@@ -378,12 +411,12 @@ export default function App() {
               />
             </Field>
 
-            <Field label="Commit message*">
-              <input type="text" className="h-input" placeholder="Write a short commit message" value={message} onChange={e => setMessage(e.target.value)} />
+            <Field label="Commit message*" htmlFor="commit-message">
+              <input id="commit-message" name="commit-message" type="text" className="h-input" placeholder="Write a short commit message" value={message} onChange={e => setMessage(e.target.value)} />
             </Field>
 
-            <Field label="Commit description*">
-              <textarea className="h-textarea" placeholder="Write a description of the changes made" value={description} onChange={e => setDescription(e.target.value)} />
+            <Field label="Commit description*" htmlFor="commit-description">
+              <textarea id="commit-description" name="commit-description" className="h-textarea" placeholder="Write a description of the changes made" value={description} onChange={e => setDescription(e.target.value)} />
             </Field>
 
             <button
@@ -397,16 +430,16 @@ export default function App() {
             <div className={`advanced-content ${showAdvanced ? 'open' : ''}`}>
               <div className="advanced-inner">
                 <div className="field-row">
-                  <Field label="ClickUp task">
-                    <SearchInput placeholder="Search or paste ID" value={clickupTask} onChange={e => setClickupTask(e.target.value)} />
+                  <Field label="ClickUp task" htmlFor="clickup-task">
+                    <SearchInput id="clickup-task" placeholder="Search or paste ID" value={clickupTask} onChange={e => setClickupTask(e.target.value)} />
                   </Field>
-                  <Field label="Freshdesk ticket">
-                    <SearchInput placeholder="Search or paste ID" value={freshdeskTicket} onChange={e => setFreshdeskTicket(e.target.value)} />
+                  <Field label="Freshdesk ticket" htmlFor="freshdesk-ticket">
+                    <SearchInput id="freshdesk-ticket" placeholder="Search or paste ID" value={freshdeskTicket} onChange={e => setFreshdeskTicket(e.target.value)} />
                   </Field>
                 </div>
 
-                <Field label="Loom link">
-                  <input type="text" className="h-input" placeholder="A quick loom explaining what you have done" value={loomLink} onChange={e => setLoomLink(e.target.value)} />
+                <Field label="Loom link" htmlFor="loom-link">
+                  <input id="loom-link" name="loom-link" type="text" className="h-input" placeholder="A quick loom explaining what you have done" value={loomLink} onChange={e => setLoomLink(e.target.value)} />
                 </Field>
               </div>
             </div>
@@ -415,10 +448,10 @@ export default function App() {
 
         {view === VIEW.PENDING && (
           <>
-            <PostGeneration />
+            <PostGeneration workflowName={workflowName} moduleCount={moduleCount} connCount={connCount} naming={naming} improvements={improvements} docOutput={docOutput} />
             <div className="divider" />
-            <Field label="Job ID">
-              <input type="text" className="h-input" placeholder="Job ID will appear here..." value={jobId} readOnly />
+            <Field label="Job ID" htmlFor="job-id">
+              <input id="job-id" name="job-id" type="text" className="h-input" placeholder="Job ID will appear here..." value={jobId} readOnly />
               <p className="note-text">Approving will delete this job ID</p>
             </Field>
           </>
@@ -426,11 +459,11 @@ export default function App() {
 
         {view === VIEW.APPROVAL && (
           <>
-            <PostGeneration />
+            <PostGeneration workflowName={workflowName} moduleCount={moduleCount} connCount={connCount} naming={naming} improvements={improvements} docOutput={docOutput} />
             <div className="divider" />
 
-            <Field label="Job ID">
-              <input type="text" className="h-input" placeholder="Job ID will appear here..." value={jobId} readOnly />
+            <Field label="Job ID" htmlFor="job-id">
+              <input id="job-id" name="job-id" type="text" className="h-input" placeholder="Job ID will appear here..." value={jobId} readOnly />
               <p className="note-text">Approving will delete this job ID</p>
             </Field>
 
@@ -450,8 +483,8 @@ export default function App() {
               />
             </div>
 
-            <Field label="Suggested changes">
-              <textarea className="h-textarea" placeholder="Necessary changes to the README..." value={suggestedChanges} onChange={e => setSuggestedChanges(e.target.value)} />
+            <Field label="Suggested changes" htmlFor="suggested-changes">
+              <textarea id="suggested-changes" name="suggested-changes" className="h-textarea" placeholder="Necessary changes to the README..." value={suggestedChanges} onChange={e => setSuggestedChanges(e.target.value)} />
             </Field>
           </>
         )}

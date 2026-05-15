@@ -134,6 +134,30 @@ input[readonly], textarea[readonly] {
   justify-content: space-between;
 }
 
+.popup-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-sign-out {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: auto;
+  transition: color 0.15s;
+}
+
+.btn-sign-out:hover {
+  color: var(--color-text-primary);
+  box-shadow: none;
+}
+
 .field {
   display: flex;
   flex-direction: column;
