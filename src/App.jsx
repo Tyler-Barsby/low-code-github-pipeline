@@ -170,7 +170,11 @@ export default function App() {
   const [regEmail,  setRegEmail]  = useState('')
   const [regGithub, setRegGithub] = useState('')
   const [regUserId, setRegUserId] = useState('')
-  const [regStatus, setRegStatus] = useState('')
+  const [regStatus,      setRegStatus]      = useState('')
+  const [regStatusError, setRegStatusError] = useState(false)
+
+  const setRegInfo  = (msg) => { setRegStatus(msg); setRegStatusError(false) }
+  const setRegError = (msg) => { setRegStatus(msg); setRegStatusError(true) }
 
   const [blueprint,       setBlueprint]      = useState('')
   const [message,         setMessage]        = useState('')
@@ -180,6 +184,10 @@ export default function App() {
   const [freshdeskTicket, setFreshdeskTicket] = useState('')
   const [loomLink,        setLoomLink]        = useState('')
   const [status,          setStatus]          = useState('Copy a blueprint, then click generate. Analysis takes roughly 1 minute.')
+  const [statusError,     setStatusError]     = useState(false)
+
+  const setInfo  = (msg) => { setStatus(msg); setStatusError(false) }
+  const setError = (msg) => { setStatus(msg); setStatusError(true) }
 
   const [workflowName,     setWorkflowName]     = useState('')
   const [moduleCount,      setModuleCount]      = useState('—')
@@ -198,12 +206,12 @@ export default function App() {
     setNaming(data.namingConvention || '—')
     setImprovements(Array.isArray(data.improvements) ? data.improvements : [])
     setDocOutput(data.documentation || '')
-    setStatus('Documentation ready. Review and approve below.')
+    setInfo('Documentation ready. Review and approve below.')
     setView(VIEW.APPROVAL)
   }
 
   const handlePollingError = (msg) => {
-    setStatus(msg || 'An error occurred.')
+    setError(msg || 'An error occurred.')
     setView(VIEW.INITIAL)
   }
 
@@ -212,35 +220,39 @@ export default function App() {
       if (id) {
         setJobId(id)
         setView(VIEW.PENDING)
-        setStatus('Resuming analysis...')
+        setInfo('Resuming analysis...')
         startPolling(id, { onComplete: handlePollingComplete, onError: handlePollingError })
       }
     })
     return () => stopPolling()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRegister = async () => {
     if (!regName || !regEmail || !regGithub) {
-      setRegStatus('Please fill in all fields.')
+      setRegError('Please fill in all fields.')
       return
     }
     try {
       await registerUser({ name: regName, email: regEmail, github: regGithub })
-      setRegStatus('Registration submitted. An administrator will review your account and provide you with a User ID. Once received, store it somewhere safe (e.g. 1Password) — you will need it to log in.')
+      setRegInfo('Registration submitted. An administrator will review your account and provide you with a User ID. Once received, store it somewhere safe (e.g. 1Password) — you will need it to log in.')
     } catch (err) {
-      setRegStatus(`Registration failed: ${err.message}`)
+      setRegError(`Registration failed: ${err.message}`)
     }
   }
 
   const handleEnterUserId = async () => {
     if (!regUserId.trim()) {
-      setRegStatus('Please enter your User ID.')
+      setRegError('Please enter your User ID.')
       return
     }
     try {
       const data = await loginUser(regUserId.trim())
       if (!data.found) {
-        setRegStatus('Invalid User ID. Please check it and try again.')
+        setRegError(
+          data.reason === 'pending'
+            ? 'Your account is awaiting approval. Please try again once an administrator has approved your account.'
+            : 'Invalid User ID. Please check it and try again.'
+        )
         return
       }
       localStorage.setItem('userId',          regUserId.trim())
@@ -250,7 +262,7 @@ export default function App() {
       localStorage.setItem('loginTimestamp',   Date.now().toString())
       setView(VIEW.INITIAL)
     } catch {
-      setRegStatus('Invalid User ID. Please check it and try again.')
+      setRegError('Invalid User ID. Please check it and try again.')
     }
   }
 
@@ -262,7 +274,7 @@ export default function App() {
       bp = bp.trim()
     }
     if (!bp || !message || !description) {
-      setStatus('Please fill in all required fields.')
+      setError('Please fill in all required fields.')
       return
     }
     const user = {
@@ -272,7 +284,7 @@ export default function App() {
       userId: localStorage.getItem('userId')     || '',
     }
     try {
-      setStatus('Submitting blueprint...')
+      setInfo('Submitting blueprint...')
       const { jobId: id } = await submitBlueprint({
         blueprint: bp,
         commitMessage:     message,
@@ -285,16 +297,16 @@ export default function App() {
       setJobId(id)
       saveJobToStorage(id)
       setView(VIEW.PENDING)
-      setStatus('Analysing blueprint. This takes roughly 1 minute...')
+      setInfo('Analysing blueprint. This takes roughly 1 minute...')
       startPolling(id, { onComplete: handlePollingComplete, onError: handlePollingError })
     } catch (err) {
-      setStatus(`Error: ${err.message}`)
+      setError(`Error: ${err.message}`)
     }
   }
 
   const handleApprove = async () => {
     if (!confirmed) {
-      setStatus('Please confirm you have read and reviewed the README.')
+      setError('Please confirm you have read and reviewed the README.')
       return
     }
     const user = {
@@ -303,30 +315,30 @@ export default function App() {
       userId: localStorage.getItem('userId')     || '',
     }
     try {
-      setStatus('Pushing to GitHub...')
+      setInfo('Pushing to GitHub...')
       await submitApproval({ jobId, decision: 'approved', suggestedChanges: null, user })
       clearJobFromStorage()
       setConfirmed(false)
       setSuggestedChanges('')
       setView(VIEW.INITIAL)
-      setStatus('README pushed to GitHub successfully.')
+      setInfo('README pushed to GitHub successfully.')
     } catch (err) {
-      setStatus(`Approval failed: ${err.message}`)
+      setError(`Approval failed: ${err.message}`)
     }
   }
 
   const handleDecline = async () => {
     try {
-      setStatus('Sending feedback for reprocessing...')
+      setInfo('Sending feedback for reprocessing...')
       const { jobId: newId } = await submitApproval({ jobId, decision: 'declined', suggestedChanges })
       setJobId(newId)
       saveJobToStorage(newId)
       setConfirmed(false)
       setView(VIEW.PENDING)
-      setStatus('Reprocessing. This takes roughly 1 minute...')
+      setInfo('Reprocessing. This takes roughly 1 minute...')
       startPolling(newId, { onComplete: handlePollingComplete, onError: handlePollingError })
     } catch (err) {
-      setStatus(`Error: ${err.message}`)
+      setError(`Error: ${err.message}`)
     }
   }
 
@@ -372,7 +384,11 @@ export default function App() {
 
           <button className="btn-secondary" onClick={handleEnterUserId}>Continue</button>
 
-          {regStatus && <p className="status-text">{regStatus}</p>}
+          {regStatus && (
+            regStatusError
+              ? <div className="alert-error">{regStatus}</div>
+              : <p className="status-text">{regStatus}</p>
+          )}
         </div>
       </div>
     )
@@ -395,7 +411,10 @@ export default function App() {
           Generate documentation
         </button>
 
-        <p className="status-text">{status}</p>
+        {statusError
+          ? <div className="alert-error">{status}</div>
+          : <p className="status-text">{status}</p>
+        }
 
         {view === VIEW.INITIAL && (
           <>

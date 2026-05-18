@@ -18,6 +18,9 @@
   --color-warning-bg:       #FAEEDA;
   --color-warning-border:   #E8C97A;
   --color-warning-text:     #854F0B;
+  --color-error-bg:         #FCEAEA;
+  --color-error-border:     #E8AAAA;
+  --color-error-text:       #8B1A1A;
   --font-sans:              'DM Sans', system-ui, sans-serif;
   --font-mono:              'DM Mono', 'Courier New', monospace;
   --font-weight-regular:    400;
@@ -61,6 +64,9 @@
   --color-warning-bg:       #1F1500;
   --color-warning-border:   #4A3800;
   --color-warning-text:     #D4900A;
+  --color-error-bg:         #2A0A0A;
+  --color-error-border:     #5C1A1A;
+  --color-error-text:       #F28B82;
 }
 
 *, *::before, *::after {
@@ -270,6 +276,17 @@ input[readonly], textarea[readonly] {
   color: var(--color-text-secondary);
   text-align: center;
   width: 100%;
+}
+
+.alert-error {
+  font-size: var(--text-meta);
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+  border: 0.5px solid var(--color-error-border);
+  border-radius: var(--r-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  text-align: left;
 }
 
 .section-title {
