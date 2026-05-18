@@ -54,8 +54,6 @@ export async function submitApproval(payload) {
   return res.json()
 }
 
-// ─── Polling ──────────────────────────────────────────────────────────────────
-
 const POLL_INTERVAL_MS = 5000
 let   pollTimer        = null
 
