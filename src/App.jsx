@@ -176,6 +176,7 @@ export default function App() {
   const setRegInfo  = (msg) => { setRegStatus(msg); setRegStatusError(false) }
   const setRegError = (msg) => { setRegStatus(msg); setRegStatusError(true) }
 
+  const [sourceUrl,       setSourceUrl]      = useState('')
   const [blueprint,       setBlueprint]      = useState('')
   const [message,         setMessage]        = useState('')
   const [description,     setDescription]    = useState('')
@@ -216,6 +217,9 @@ export default function App() {
   }
 
   useEffect(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      setSourceUrl(tabs[0]?.url || '')
+    })
     getJobFromStorage().then(id => {
       if (id) {
         setJobId(id)
@@ -277,6 +281,12 @@ export default function App() {
       setError('Please fill in all required fields.')
       return
     }
+    let workflowName = ''
+    try {
+      workflowName = JSON.parse(bp).name || ''
+    } catch {
+      // blueprint not valid JSON — workflowName stays empty
+    }
     const user = {
       name:   localStorage.getItem('reg_name')   || '',
       email:  localStorage.getItem('reg_email')  || '',
@@ -287,11 +297,13 @@ export default function App() {
       setInfo('Submitting blueprint...')
       const { jobId: id } = await submitBlueprint({
         blueprint: bp,
+        workflowName,
         commitMessage:     message,
         commitDescription: description,
         clickupTask,
         freshdeskTicket,
         loomLink,
+        sourceUrl,
         user,
       })
       setJobId(id)
