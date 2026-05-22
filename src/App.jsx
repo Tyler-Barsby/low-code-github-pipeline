@@ -8,8 +8,7 @@ import {
   saveJobToStorage,
   clearJobFromStorage,
   getJobFromStorage,
-  startPolling,
-  stopPolling,
+  pollJobOnce,
 } from './Api.js'
 
 const VIEW = {
@@ -146,7 +145,6 @@ export default function App() {
     localStorage.removeItem('reg_email')
     localStorage.removeItem('reg_github')
     localStorage.removeItem('loginTimestamp')
-    stopPolling()
     clearJobFromStorage()
     setView(VIEW.REGISTER)
   }
@@ -224,11 +222,10 @@ export default function App() {
       if (id) {
         setJobId(id)
         setView(VIEW.PENDING)
-        setInfo('Resuming analysis...')
-        startPolling(id, { onComplete: handlePollingComplete, onError: handlePollingError })
+        setInfo('Checking job status...')
+        pollJobOnce(id, { onComplete: handlePollingComplete, onError: handlePollingError })
       }
     })
-    return () => stopPolling()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRegister = async () => {
@@ -309,8 +306,8 @@ export default function App() {
       setJobId(id)
       saveJobToStorage(id)
       setView(VIEW.PENDING)
-      setInfo('Analysing blueprint. This takes roughly 1 minute...')
-      startPolling(id, { onComplete: handlePollingComplete, onError: handlePollingError })
+      setInfo('Analysing blueprint. Reopen the extension to check progress.')
+      pollJobOnce(id, { onComplete: handlePollingComplete, onError: handlePollingError })
     } catch (err) {
       setError(`Error: ${err.message}`)
     }
@@ -347,8 +344,8 @@ export default function App() {
       saveJobToStorage(newId)
       setConfirmed(false)
       setView(VIEW.PENDING)
-      setInfo('Reprocessing. This takes roughly 1 minute...')
-      startPolling(newId, { onComplete: handlePollingComplete, onError: handlePollingError })
+      setInfo('Reprocessing. Reopen the extension to check progress.')
+      pollJobOnce(newId, { onComplete: handlePollingComplete, onError: handlePollingError })
     } catch (err) {
       setError(`Error: ${err.message}`)
     }

@@ -54,9 +54,6 @@ export async function submitApproval(payload) {
   return res.json()
 }
 
-const POLL_INTERVAL_MS = 5000
-let   pollTimer        = null
-
 export function saveJobToStorage(jobId) {
   chrome.storage.local.set({ activeJobId: jobId })
 }
@@ -73,34 +70,17 @@ export function getJobFromStorage() {
   })
 }
 
-export function startPolling(jobId, { onComplete, onError }) {
-  stopPolling()
-
-  const poll = async () => {
-    try {
-      const data = await checkJobStatus(jobId)
-
-      if (data.status === 'complete') {
-        stopPolling()
-        clearJobFromStorage()
-        onComplete(data)
-      } else if (data.status === 'error') {
-        stopPolling()
-        clearJobFromStorage()
-        onError(data.message || 'Job failed.')
-      }
-    } catch (err) {
-      console.error('Poll error:', err)
+export async function pollJobOnce(jobId, { onComplete, onError }) {
+  try {
+    const data = await checkJobStatus(jobId)
+    if (data.status === 'complete') {
+      clearJobFromStorage()
+      onComplete(data)
+    } else if (data.status === 'error') {
+      clearJobFromStorage()
+      onError(data.message || 'Job failed.')
     }
-  }
-
-  poll()
-  pollTimer = setInterval(poll, POLL_INTERVAL_MS)
-}
-
-export function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
+  } catch (err) {
+    console.error('Status check error:', err)
   }
 }
