@@ -1,0 +1,3 @@
+[submodule "brandguide"]
+	path = brandguide
+	url = https://github.com/flowmondo/Brand-System.git
