@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import './App.css'
+import './forms.css'
 import {
   registerUser,
   loginUser,
@@ -19,9 +19,9 @@ const VIEW = {
 }
 
 const SearchIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
-    <circle cx="5.5" cy="5.5" r="4" stroke="var(--color-text-placeholder)" strokeWidth="1.2"/>
-    <line x1="8.5" y1="8.5" x2="12" y2="12" stroke="var(--color-text-placeholder)" strokeWidth="1.2" strokeLinecap="round"/>
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="search-icon">
+    <circle cx="5.5" cy="5.5" r="4" stroke="var(--text-muted)" strokeWidth="1.2"/>
+    <line x1="8.5" y1="8.5" x2="12" y2="12" stroke="var(--text-muted)" strokeWidth="1.2" strokeLinecap="round"/>
   </svg>
 )
 
@@ -45,33 +45,32 @@ const SunIcon = () => (
   </svg>
 )
 
-function Field({ label, htmlFor, children }) {
+function Field({ label, htmlFor, required, optional, hint, children }) {
   return (
     <div className="field">
-      <label htmlFor={htmlFor}>{label}</label>
+      <label htmlFor={htmlFor}>
+        {label}
+        {required && <span className="required"> *</span>}
+        {optional && <span className="optional"> (optional)</span>}
+      </label>
       {children}
+      {hint && <p className="hint">{hint}</p>}
     </div>
   )
 }
 
 function Checkbox({ checked, onChange, label }) {
   return (
-    <div className="checkbox-row" onClick={onChange}>
-      <div className={`checkbox-box ${checked ? 'checked' : ''}`}>
-        {checked && (
-          <svg width="8" height="7" viewBox="0 0 9 8" fill="none">
-            <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        )}
-      </div>
-      {label && <span className="checkbox-label">{label}</span>}
-    </div>
+    <label className="checkbox-row">
+      <input type="checkbox" className="checkbox" checked={checked} onChange={onChange} />
+      {label}
+    </label>
   )
 }
 
 function SearchInput({ id, placeholder, value, onChange }) {
   return (
-    <div className="search-input-wrap">
+    <div className="search-field">
       <input id={id} name={id} type="text" placeholder={placeholder} value={value} onChange={onChange} />
       <SearchIcon />
     </div>
@@ -80,9 +79,17 @@ function SearchInput({ id, placeholder, value, onChange }) {
 
 function ThemeToggle({ theme, onToggle }) {
   return (
-    <button className="theme-toggle" onClick={onToggle}>
+    <button className="btn icon-only sm" onClick={onToggle}>
       {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </button>
+  )
+}
+
+function Alert({ tone, children }) {
+  return (
+    <div className={`fm-alert fm-inline-alert is-${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
+      <div className="fm-alert-body"><div className="fm-alert-title">{children}</div></div>
+    </div>
   )
 }
 
@@ -90,37 +97,39 @@ function PostGeneration({ workflowName, moduleCount, connCount, naming, improvem
   return (
     <>
       <Field label="Workflow name" htmlFor="workflow-name">
-        <input id="workflow-name" name="workflow-name" type="text" className="h-input" placeholder="Scenario name will appear here..." value={workflowName} readOnly />
+        <input id="workflow-name" name="workflow-name" type="text" placeholder="Scenario name will appear here..." value={workflowName} readOnly />
       </Field>
 
-      <div className="stat-grid">
-        <div className="stat-card">
-          <span className="stat-value">{moduleCount}</span>
-          <span className="stat-label">Modules</span>
+      <div className="grid-3 gap-2">
+        <div className="p-3 bg-muted border-subtle radius-small flex flex-col items-center gap-1">
+          <span className="font-mono text-size-large text-color-primary">{moduleCount}</span>
+          <span className="text-size-tiny text-color-muted">Modules</span>
         </div>
-        <div className="stat-card">
-          <span className="stat-value">{connCount}</span>
-          <span className="stat-label">Connections</span>
+        <div className="p-3 bg-muted border-subtle radius-small flex flex-col items-center gap-1">
+          <span className="font-mono text-size-large text-color-primary">{connCount}</span>
+          <span className="text-size-tiny text-color-muted">Connections</span>
         </div>
-        <div className="stat-card">
-          <span className="stat-value" style={{ fontSize: 'var(--text-body)' }}>{naming}</span>
-          <span className="stat-label">Naming</span>
+        <div className="p-3 bg-muted border-subtle radius-small flex flex-col items-center gap-1">
+          <span className="font-mono text-size-small text-color-primary">{naming}</span>
+          <span className="text-size-tiny text-color-muted">Naming</span>
         </div>
       </div>
 
       {improvements.length > 0 && (
-        <div className="improvements-box">
-          <h4>⚠ Suggested improvements</h4>
-          <ul style={{ paddingLeft: '1rem', margin: 0 }}>
-            {improvements.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
+        <div className="fm-alert is-warning">
+          <div className="fm-alert-body">
+            <div className="fm-alert-title">Suggested improvements</div>
+            <ul className="fm-alert-msg">
+              {improvements.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
       <Field label="Step-by-step documentation" htmlFor="doc-output">
-        <textarea id="doc-output" name="doc-output" className="h-textarea" placeholder="AI output will appear here..." value={docOutput} readOnly />
+        <textarea id="doc-output" name="doc-output" placeholder="AI output will appear here..." value={docOutput} readOnly />
       </Field>
     </>
   )
@@ -163,6 +172,18 @@ export default function App() {
     }
     return VIEW.INITIAL
   })
+
+  useEffect(() => {
+    window.fmSetView = (name) => {
+      const target = VIEW[String(name).toUpperCase()]
+      if (!target) {
+        console.warn(`Unknown view "${name}". Valid views: ${Object.keys(VIEW).join(', ')}`)
+        return
+      }
+      setView(target)
+    }
+    return () => { delete window.fmSetView }
+  }, [])
 
   const [regName,   setRegName]   = useState('')
   const [regEmail,  setRegEmail]  = useState('')
@@ -354,49 +375,47 @@ export default function App() {
 
   if (view === VIEW.REGISTER) {
     return (
-      <div style={{ background: 'var(--color-bg)', minHeight: '100%' }}>
-        <div className="reg-header">
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </div>
-        <div className="popup">
-          <div>
-            <p className="page-title">Low-Code AI Architect</p>
-            <p style={{ fontSize: 'var(--text-meta)', color: 'var(--color-text-secondary)', marginTop: 4 }}>
-              Set up your account to get started.
-            </p>
+      <div className="bg-canvas">
+        <div className="p-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4>low-code AI architect</h4>
+              <p className="text-size-tiny text-color-muted mt-1">Set up your account to get started.</p>
+            </div>
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
 
-          <Field label="Full name" htmlFor="reg-name">
-            <input id="reg-name" name="reg-name" type="text" className="h-input" placeholder="Your name" value={regName} onChange={e => setRegName(e.target.value)} />
+          <Field label="Full name" htmlFor="reg-name" required>
+            <input id="reg-name" name="reg-name" type="text" placeholder="Your name" value={regName} onChange={e => setRegName(e.target.value)} />
           </Field>
 
-          <Field label="Email" htmlFor="reg-email">
-            <input id="reg-email" name="reg-email" type="email" className="h-input" placeholder="you@flowmondo.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
+          <Field label="Email" htmlFor="reg-email" required>
+            <input id="reg-email" name="reg-email" type="email" placeholder="you@flowmondo.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
           </Field>
 
-          <Field label="GitHub username" htmlFor="reg-github">
-            <input id="reg-github" name="reg-github" type="text" className="h-input" placeholder="github-username" value={regGithub} onChange={e => setRegGithub(e.target.value)} />
+          <Field label="GitHub username" htmlFor="reg-github" required>
+            <input id="reg-github" name="reg-github" type="text" placeholder="github-username" value={regGithub} onChange={e => setRegGithub(e.target.value)} />
           </Field>
 
-          <button className="btn-primary" onClick={handleRegister}>Request access</button>
+          <button className="btn w-full" onClick={handleRegister}>Request access</button>
 
           <div className="divider" />
 
           <div>
-            <p style={{ fontSize: 'var(--text-section)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4 }}>Already have a User ID?</p>
-            <p style={{ fontSize: 'var(--text-meta)', color: 'var(--color-text-secondary)', marginBottom: 8 }}>Enter the ID provided by your administrator. Keep it stored somewhere safe (e.g. 1Password).</p>
+            <p className="text-size-small text-weight-semibold text-color-primary mb-1">Already have a User ID?</p>
+            <p className="text-size-tiny text-color-muted mb-2">Enter the ID provided by your administrator. Keep it stored somewhere safe (e.g. 1Password).</p>
           </div>
 
-          <Field label="User ID" htmlFor="reg-user-id">
-            <input id="reg-user-id" name="reg-user-id" type="text" className="h-input" placeholder="Enter your User ID" value={regUserId} onChange={e => setRegUserId(e.target.value)} />
+          <Field label="User ID" htmlFor="reg-user-id" required>
+            <input id="reg-user-id" name="reg-user-id" type="text" placeholder="Enter your User ID" value={regUserId} onChange={e => setRegUserId(e.target.value)} />
           </Field>
 
-          <button className="btn-secondary" onClick={handleEnterUserId}>Continue</button>
+          <button className="btn secondary w-full" onClick={handleEnterUserId}>Continue</button>
 
           {regStatus && (
             regStatusError
-              ? <div className="alert-error">{regStatus}</div>
-              : <p className="status-text">{regStatus}</p>
+              ? <Alert tone="error">{regStatus}</Alert>
+              : <p className="text-size-tiny text-color-muted text-align-center">{regStatus}</p>
           )}
         </div>
       </div>
@@ -404,51 +423,49 @@ export default function App() {
   }
 
   return (
-    <div style={{ background: 'var(--color-bg)' }}>
+    <div className="bg-canvas">
 
-      <div className="popup">
+      <div className="p-4 flex flex-col gap-4">
 
-        <div className="popup-header">
-          <p className="page-title">Low-Code AI Architect</p>
-          <div className="popup-header-actions">
-            <button className="btn-sign-out" onClick={signOut}>Sign out</button>
+        <div className="flex items-center justify-between">
+          <h4>low-code AI architect</h4>
+          <div className="flex items-center gap-2">
+            <button className="btn link" onClick={signOut}>Sign out</button>
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
         </div>
 
-        <button className="btn-primary" onClick={handleGenerate}>
+        <button className="btn w-full" onClick={handleGenerate}>
           Generate documentation
         </button>
 
         {statusError
-          ? <div className="alert-error">{status}</div>
-          : <p className="status-text">{status}</p>
+          ? <Alert tone="error">{status}</Alert>
+          : <p className="text-size-tiny text-color-muted text-align-center">{status}</p>
         }
 
         {view === VIEW.INITIAL && (
           <>
-            <Field label="Blueprint content*" htmlFor="blueprint">
+            <Field label="Blueprint content" htmlFor="blueprint" required>
               <textarea
                 id="blueprint"
                 name="blueprint"
-                className="h-textarea"
-                style={{ resize: 'vertical' }}
                 placeholder="Copy the blueprint and click generate or paste the blueprint here"
                 value={blueprint}
                 onChange={e => setBlueprint(e.target.value)}
               />
             </Field>
 
-            <Field label="Commit message*" htmlFor="commit-message">
-              <input id="commit-message" name="commit-message" type="text" className="h-input" placeholder="Write a short commit message" value={message} onChange={e => setMessage(e.target.value)} />
+            <Field label="Commit message" htmlFor="commit-message" required>
+              <input id="commit-message" name="commit-message" type="text" placeholder="Write a short commit message" value={message} onChange={e => setMessage(e.target.value)} />
             </Field>
 
-            <Field label="Commit description*" htmlFor="commit-description">
-              <textarea id="commit-description" name="commit-description" className="h-textarea" placeholder="Write a description of the changes made" value={description} onChange={e => setDescription(e.target.value)} />
+            <Field label="Commit description" htmlFor="commit-description" required>
+              <textarea id="commit-description" name="commit-description" placeholder="Write a description of the changes made" value={description} onChange={e => setDescription(e.target.value)} />
             </Field>
 
             <button
-              className={`advanced-toggle ${showAdvanced ? 'open' : ''}`}
+              className={`btn link advanced-toggle ${showAdvanced ? 'open' : ''}`}
               onClick={() => setShowAdvanced(v => !v)}
             >
               <span className="arrow">›</span>
@@ -458,16 +475,16 @@ export default function App() {
             <div className={`advanced-content ${showAdvanced ? 'open' : ''}`}>
               <div className="advanced-inner">
                 <div className="field-row">
-                  <Field label="ClickUp task" htmlFor="clickup-task">
+                  <Field label="ClickUp task" htmlFor="clickup-task" optional>
                     <SearchInput id="clickup-task" placeholder="Search or paste ID" value={clickupTask} onChange={e => setClickupTask(e.target.value)} />
                   </Field>
-                  <Field label="Freshdesk ticket" htmlFor="freshdesk-ticket">
+                  <Field label="Freshdesk ticket" htmlFor="freshdesk-ticket" optional>
                     <SearchInput id="freshdesk-ticket" placeholder="Search or paste ID" value={freshdeskTicket} onChange={e => setFreshdeskTicket(e.target.value)} />
                   </Field>
                 </div>
 
-                <Field label="Loom link" htmlFor="loom-link">
-                  <input id="loom-link" name="loom-link" type="text" className="h-input" placeholder="A quick loom explaining what you have done" value={loomLink} onChange={e => setLoomLink(e.target.value)} />
+                <Field label="Loom link" htmlFor="loom-link" optional>
+                  <input id="loom-link" name="loom-link" type="text" placeholder="A quick loom explaining what you have done" value={loomLink} onChange={e => setLoomLink(e.target.value)} />
                 </Field>
               </div>
             </div>
@@ -478,9 +495,8 @@ export default function App() {
           <>
             <PostGeneration workflowName={workflowName} moduleCount={moduleCount} connCount={connCount} naming={naming} improvements={improvements} docOutput={docOutput} />
             <div className="divider" />
-            <Field label="Job ID" htmlFor="job-id">
-              <input id="job-id" name="job-id" type="text" className="h-input" placeholder="Job ID will appear here..." value={jobId} readOnly />
-              <p className="note-text">Approving will delete this job ID</p>
+            <Field label="Job ID" htmlFor="job-id" hint="Approving will delete this job ID">
+              <input id="job-id" name="job-id" type="text" placeholder="Job ID will appear here..." value={jobId} readOnly />
             </Field>
           </>
         )}
@@ -490,18 +506,17 @@ export default function App() {
             <PostGeneration workflowName={workflowName} moduleCount={moduleCount} connCount={connCount} naming={naming} improvements={improvements} docOutput={docOutput} />
             <div className="divider" />
 
-            <Field label="Job ID" htmlFor="job-id">
-              <input id="job-id" name="job-id" type="text" className="h-input" placeholder="Job ID will appear here..." value={jobId} readOnly />
-              <p className="note-text">Approving will delete this job ID</p>
+            <Field label="Job ID" htmlFor="job-id" hint="Approving will delete this job ID">
+              <input id="job-id" name="job-id" type="text" placeholder="Job ID will appear here..." value={jobId} readOnly />
             </Field>
 
-            <div className="approval-section">
-              <p className="section-title">Approval gate</p>
-              <p className="note-text" style={{ marginTop: 3 }}>Please read the generated README and confirm it is correct</p>
+            <div className="flex flex-col gap-3">
+              <p className="text-size-small text-weight-semibold text-color-primary">Approval gate</p>
+              <p className="text-size-tiny text-color-muted">Please read the generated README and confirm it is correct</p>
 
-              <div className="btn-row">
-                <button className="btn-approve" onClick={handleApprove}>Approve</button>
-                <button className="btn-decline" onClick={handleDecline}>Decline</button>
+              <div className="flex gap-2 w-full">
+                <button className="btn flex-1" onClick={handleApprove}>Approve</button>
+                <button className="btn is-destructive flex-1" onClick={handleDecline}>Decline</button>
               </div>
 
               <Checkbox
@@ -511,8 +526,8 @@ export default function App() {
               />
             </div>
 
-            <Field label="Suggested changes" htmlFor="suggested-changes">
-              <textarea id="suggested-changes" name="suggested-changes" className="h-textarea" placeholder="Necessary changes to the README..." value={suggestedChanges} onChange={e => setSuggestedChanges(e.target.value)} />
+            <Field label="Suggested changes" htmlFor="suggested-changes" optional>
+              <textarea id="suggested-changes" name="suggested-changes" placeholder="Necessary changes to the README..." value={suggestedChanges} onChange={e => setSuggestedChanges(e.target.value)} />
             </Field>
           </>
         )}

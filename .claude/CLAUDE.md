@@ -23,7 +23,8 @@ my-extension/
 │   └── favicon.svg
 ├── src/
 │   ├── App.jsx              Main UI — all views and state
-│   ├── App.css              All styles and design tokens
+│   ├── flowmondo.css        flowmondo brandguide bundle (tokens+base+utilities+components) — do not edit, re-copy from brandguide/dist/css/flowmondo.css
+│   ├── forms.css            Cloned field-component chrome (label/input/textarea/select/checkbox) — brandguide ships this only as id-scoped demo CSS, so it's recreated here with real class names per W2/W4
 │   ├── api.js               All n8n webhook calls and polling logic
 │   ├── main.jsx             React entry point — do not edit
 │   └── index.css            Root body styles — do not edit
@@ -39,10 +40,18 @@ my-extension/
 
 - **React 19** with hooks, no TypeScript
 - **Vite 8** for bundling
-- **Plain CSS** — no Tailwind, no CSS modules, no styled-components
+- **Plain CSS** — no Tailwind, no CSS modules, no styled-components. Styling follows
+  the flowmondo brandguide (`brandguide/` submodule): `src/flowmondo.css` is the
+  vendored design-system bundle, `src/forms.css` clones the one component the
+  bundle ships only as scoped demo CSS. Compose UI from flowmondo's component
+  classes (`.btn`, `.fm-alert`, `.badge`, `.checkbox`) and utility classes
+  (`flex`, `gap-*`, `p-*`, `bg-*`, `text-*`, `radius-*`) — never invent a new
+  bespoke class when an existing token-backed utility or component covers it
 - **No external UI libraries**
 - **Chrome Extension Manifest V3**
-- Font: DM Sans + DM Mono (loaded via Google Fonts in index.html)
+- Fonts: Tilt Warp (headings only), Inter (all UI/body text), JetBrains Mono
+  (code/stat counters only) — self-hosted as `.ttf` files in `public/fonts/`,
+  loaded via `@font-face` inside `flowmondo.css`
 
 ---
 
@@ -180,86 +189,74 @@ stopPolling()
 
 ## CSS design system
 
-All tokens are CSS custom properties on `:root`. Dark mode overrides via
-`[data-theme="dark"]` set on `document.documentElement`.
+The extension follows the **flowmondo brandguide** (`brandguide/` git submodule —
+its own `CLAUDE.md` and `dist/BRAND.md` are the canonical rules). `src/flowmondo.css`
+is a verbatim copy of `brandguide/dist/css/flowmondo.css` (only the three
+`@font-face` `src:` paths are rewritten to `/fonts/...ttf` so fonts are self-hosted
+instead of loaded from the submodule or a remote CDN). Never hand-edit
+`flowmondo.css` — re-copy it from the submodule and re-apply the font path fix if
+the brandguide changes.
 
-### Colour tokens
+All design tokens are CSS custom properties defined in `flowmondo.css`'s tokens
+layer (`--surface-*`, `--text-*`, `--border-*`, `--font-*`, `--_ui-styles---*`).
+Dark mode overrides are already built into that file and activate via
+`[data-theme="dark"]` set on `document.documentElement` (see the `theme` `useEffect`
+in `App.jsx`) — no extra dark-mode CSS is ever needed in this project.
 
-```
---color-bg              Page background
---color-bg-subtle       Stat cards, subtle surfaces
---color-bg-muted        Read-only inputs
---color-bg-white        Editable inputs, buttons
---color-text-primary    Headings, values
---color-text-secondary  Labels, secondary text, placeholders label
---color-text-placeholder Input placeholder text
---color-text-muted      Stat labels
---color-border          Input borders
---color-border-subtle   Stat card borders, dividers
---color-accent          #E91E63 — primary button, focus ring, checkbox
---color-accent-fg       White — text on accent
---color-approve         Green — approve button
---color-decline         Red — decline button
---color-warning-bg/border/text  Improvements box
-```
+### Hard rules (inherited from the brandguide — see `brandguide/dist/BRAND.md`)
 
-### Typography tokens
+- Every colour must resolve to a token from `flowmondo.css` — no raw hex/rgb
+- `flowmondo` is always lowercase in copy (except first word of a title)
+- Body text uses `var(--text-body)` / `.text-color-body` — never pure black
+- Tilt Warp for headings only (`.heading-style-*`), Inter for all other UI/body
+  text (the default), JetBrains Mono only for code/counters (e.g. stat numbers)
+- Pill radius on tags/badges; buttons are 12px radius (`.btn`), deliberately not
+  pill-shaped
+- No inline `style={{ }}` attributes — reach for a utility class or, if nothing
+  covers it, add a real class to `forms.css`
+- UK English, no em dashes, no emoji in user-facing copy
 
-```
---font-sans     DM Sans
---font-mono     DM Mono — used on readonly inputs
---text-title    1.125rem  Page title
---text-section  0.875rem  Section headings
---text-body     0.8125rem Default body / inputs
---text-meta     0.6875rem Labels, notes, small text
---text-stat     1.25rem   Stat card values
-```
-
-### Spacing tokens
+### Component classes in use
 
 ```
---space-1  4px
---space-2  8px
---space-3  12px
---space-4  16px
---space-5  20px
---space-6  24px
---r-sm     4px  Checkboxes, small buttons
---r-md     6px  Inputs, primary buttons
---r-lg     8px  Stat cards, improvements box
---height-input     2.125rem  Single-line inputs
---height-textarea  8rem      Multi-line textareas
+.btn / .btn.secondary / .btn.link / .btn.is-destructive / .btn.icon-only
+                 flowmondo button variants — see brandguide/dist/style-guide.html#button
+.fm-alert / .fm-inline-alert  is-error / is-warning / is-info / is-success
+                 Status messaging — see brandguide/dist/style-guide.html#inline-alert
+.checkbox        Native checkbox styling (accent-color: brand pink)
 ```
 
-### Key CSS classes
+### Utility classes in use (from flowmondo.css's utilities layer)
 
 ```
-.popup           Flex column container, 16px padding and gap
-.popup-header    Flex row — page title left, theme toggle right
-.field           Label + input wrapper, enforces left-aligned labels
-.field-row       Two .field side by side (used for ClickUp + Freshdesk)
-.btn-primary     Accent background button (full width)
-.btn-secondary   Outlined button (full width)
-.btn-approve     Green approve button (flex: 1 inside .btn-row)
-.btn-decline     Red decline button (flex: 1 inside .btn-row)
-.btn-row         Flex row for approve/decline pair
-.stat-grid       3-column grid for stat cards
-.stat-card       Individual stat card
-.stat-value      Large number inside stat card
-.stat-label      Uppercase small label inside stat card
-.improvements-box Warning-coloured box for AI suggestions
-.divider         0.5px horizontal rule
-.advanced-toggle Chevron button for advanced section
-.advanced-content Grid-row animated collapsible wrapper
-.advanced-inner  Inner content of collapsible
-.search-input-wrap Input with trailing search icon
-.checkbox-row    Custom checkbox + label row
-.checkbox-box    The visual checkbox square (add .checked for filled state)
-.theme-toggle    Icon-only button for light/dark toggle
-.reg-header      Top-right container for theme toggle on register page
-.h-input         Sets height to --height-input
-.h-textarea      Sets height to --height-textarea
+flex, flex-col, items-center, items-start, justify-between, justify-end, gap-*
+p-*, px-*, py-*, mt-*, mb-*, w-full
+bg-canvas, bg-muted, bg-default
+border-subtle, radius-small, radius-medium
+heading-style-h4, text-size-*, text-color-primary/body/muted, text-weight-*
+font-mono   used on stat-counter values, per the brandguide's
+            "JetBrains Mono for numeric stats/counters" rule
 ```
+
+### Project-specific classes (`src/forms.css`)
+
+The brandguide's field/form component (`brandguide/dist/components/field/`) is only
+shipped as CSS scoped under `#field` (a style-guide-page artefact, not a portable
+class) — so `forms.css` clones its verbatim property values into real, reusable
+classes, all still built from brandguide tokens:
+
+```
+.field           Label + input/textarea wrapper (label, .required/.optional spans, .hint)
+.field-row       Two .field side by side (ClickUp + Freshdesk)
+.checkbox-row    <label> wrapping <input type="checkbox" class="checkbox"> + text
+.search-field    Wraps a .field input with a trailing icon (ClickUp/Freshdesk search)
+.advanced-toggle / .advanced-content / .advanced-inner
+                 Grid-row animated disclosure for the Advanced section
+.divider         1px horizontal rule using --border-subtle
+```
+
+If the brandguide ever ships a portable field/disclosure component, prefer it and
+delete the matching rules from `forms.css`.
 
 ---
 
